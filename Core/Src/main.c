@@ -21,7 +21,10 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include <string.h>
+#include "../../ECUAL/Fuzzy_motor/Fuzzy_motor.h"
+#include "../../ECUAL/Fuzzy_motor/Fuzzy_motor_cfg.h"
+#include "../../ECUAL/UART/STM32_UART.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -31,7 +34,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-
+#define BUFFER_SIZE 20
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -65,7 +68,18 @@ static void MX_USART1_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
+char rcv_buffer[BUFFER_SIZE];
+uint8_t controller = 0;
 
+// Function to handle timer interrupt handler
+void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
+{
+  if(htim->Instance == TIM1)
+  {
+    if(controller)
+      fuzzySpeedControl(&motor1, &fuzzy_inputs, &fuzzy_outputs, &fuzzy_rules);
+  }
+}
 /* USER CODE END 0 */
 
 /**
@@ -103,6 +117,24 @@ int main(void)
   MX_USART1_UART_Init();
   /* USER CODE BEGIN 2 */
 
+  // Initiate the encoder
+  HAL_TIM_Encoder_Start(&htim2, TIM_CHANNEL_ALL);
+
+  // Initiate the PWM 
+  HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
+
+  // Initiate the fuzzy controller
+  fuzzySystemInit(&motor1);
+
+  HAL_Delay(1000);
+
+  // Initiate the UART 
+  // Initiate the UART IDLE line detection
+  STM32_UART_IDLE_Start(&huart1, &hdma_usart1_rx, rcv_buffer, BUFFER_SIZE);
+  STM32_UART_sendString(&huart1, (uint8_t*)"Hello Vinh Gia\r\n");
+
+  // Start the timer interrupt
+  HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE END 2 */
 
   /* Infinite loop */

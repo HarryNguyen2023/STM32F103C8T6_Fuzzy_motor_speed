@@ -14,7 +14,7 @@ typedef enum
 }PWM_CHANNEL;
 
 // Structure for the membership function of Fuzzy logic
-typedef struct 
+typedef struct Fuzzy_MF
 {
     char name[3];
     float output;       // Degree of membership
@@ -22,31 +22,31 @@ typedef struct
     float point2;       // Left upper point on the x-axis of the membership function
     float point3;       // Right upper point of the trapezoidal
     float point4;       // Right lower point of the trapezoidal
-    Fuzzy_MF* next;     // Pointer to the next membership function in the linked list
+    struct Fuzzy_MF* next;     // Pointer to the next membership function in the linked list
 }Fuzzy_MF;
 
 // Structure of input or output of the Fuzzy logic
-typedef struct 
+typedef struct Fuzzy_IO
 {
     char name[MAX_NAME];               // Name of the input or output type
     float value;                       // IO value changing every scan cycle
     Fuzzy_MF* membership_functions;    // List of the membership functions of the specific I/O
-    Fuzzy_IO* next;                    // Pointer to the next I/O in the system
+    struct Fuzzy_IO* next;                    // Pointer to the next I/O in the system
 }Fuzzy_IO;
 
 // Structure for rule elements
-typedef struct 
+typedef struct Fuzzy_rule_element
 {
     float* value;               // Pointer to the output of the antecedent/output strength value;
-    Fuzzy_rule_element* next;   // Pointer to the next element;
+    struct Fuzzy_rule_element* next;   // Pointer to the next element;
 }Fuzzy_rule_element;
 
 // Structure for the rule system of the Fuzzy logic
-typedef struct 
+typedef struct Fuzzy_rule_base
 {
     Fuzzy_rule_element* if_side;        // The if clause of the rule
     Fuzzy_rule_element* then_side;      // The then clause of the rule
-    Fuzzy_rule_base* next;              // Next rule 
+    struct Fuzzy_rule_base* next;              // Next rule 
 }Fuzzy_rule_base;
 
 // Structure for the technical specifications of the motor
@@ -91,7 +91,7 @@ typedef struct
 // Public function prototypes
 void inputSpeedHandling(Fuzzy_motor* motor, int speed);
 
-void fuzzySystemInit(Fuzzy_IO* fuzzy_system_input, Fuzzy_IO* fuzzy_system_output, Fuzzy_rule_base* fuzzy_system_rule);
+void fuzzySystemInit(Fuzzy_motor* motor);
 void fuzzySpeedControl(Fuzzy_motor* motor, Fuzzy_IO* fuzzy_inputs, Fuzzy_IO* fuzzy_outputs, Fuzzy_rule_base* fuzzy_rules);
 
 #endif

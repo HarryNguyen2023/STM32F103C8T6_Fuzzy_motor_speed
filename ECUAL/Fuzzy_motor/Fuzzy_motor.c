@@ -1,4 +1,5 @@
 #include "Fuzzy_motor.h"
+#include "Fuzzy_motor_cfg.h"
 
 #include <math.h>
 #include <string.h>
@@ -54,7 +55,7 @@ static void motorInit(Fuzzy_motor* motor)
     // Calculate the gains
     motor->error_gain = (uint16_t)(motor->MAX_INPUT_SPEED * motor->encoder_rev * motor->time_frame) / 60000.0;
     motor->derror_gain = motor->error_gain;
-    motor->output_gain = (uint16_t)(motor->MAX_PWM * 1.5);
+    motor->output_gain = motor->MAX_PWM;
 }
 
 // Function to update the PWM dutycycle of the motor
@@ -172,6 +173,7 @@ static Fuzzy_MF* mfInit(char* name, float point1, float point2, float point3, fl
 static Fuzzy_IO* ioInit(char* name, Fuzzy_MF* mf_head)
 {
     Fuzzy_IO* fuzzy_io = (Fuzzy_IO*)malloc(sizeof(Fuzzy_IO));
+    strcpy(fuzzy_io->name, name);
     fuzzy_io->value = 0;
     fuzzy_io->membership_functions = mf_head;
     fuzzy_io->next = NULL;
@@ -184,6 +186,7 @@ static Fuzzy_rule_element* ruleElementInit(Fuzzy_MF* mf)
     Fuzzy_rule_element* rule_element = (Fuzzy_rule_element*)malloc(sizeof(Fuzzy_rule_element));
     rule_element->value = &(mf->output);
     rule_element->next = NULL;
+    return rule_element;
 }
 
 // Function to initiate the rule base of the Fuzzy logic
@@ -193,6 +196,7 @@ static Fuzzy_rule_base* ruleBaseInit(Fuzzy_rule_element* if_side, Fuzzy_rule_ele
     rule_base->if_side = if_side;
     rule_base->then_side = then_side;
     rule_base->next = NULL;
+    return rule_base;
 }
 
 // Function to calculate the degree of membership 
@@ -273,7 +277,7 @@ static float mfArea(Fuzzy_MF* mf)
 {
     float base = mf->point4 - mf->point1;
     float top = mf->point3 - mf->point2;
-    return (base + top) / 2;
+    return mf->output * (base + top) / 2;
 }
 
 // Function to perform the defuzzication of the system
@@ -323,7 +327,7 @@ void inputSpeedHandling(Fuzzy_motor* motor, int speed)
 }
 
 // Function to initialize the Fuzzy logic system
-void fuzzySystemInit(Fuzzy_IO* fuzzy_system_input, Fuzzy_IO* fuzzy_system_output, Fuzzy_rule_base* fuzzy_system_rule)
+void fuzzySystemInit(Fuzzy_motor* motor)
 {
     // Declare Error membership functions
     Fuzzy_MF* error_NB = mfInit("NS", -1, -1, -0.6, -0.3);
@@ -349,12 +353,12 @@ void fuzzySystemInit(Fuzzy_IO* fuzzy_system_input, Fuzzy_IO* fuzzy_system_output
 
     // Declare speed output membership functions
     Fuzzy_MF* speed_NB = mfInit("NS", -1, -1, -1, -0.667);
-    Fuzzy_MF* speed_NM = mfInit("NB", -1, -0.667, -0.667, 0.333);
+    Fuzzy_MF* speed_NM = mfInit("NM", -1, -0.667, -0.667, 0.333);
     Fuzzy_MF* speed_NS = mfInit("NB", -0.667, -0.333, -0.333, 0);
     Fuzzy_MF* speed_ZE = mfInit("ZE", -0.333, 0, 0, 0.333);
-    Fuzzy_MF* speed_PS = mfInit("NS", 0, 0.333, 0.333, 0.667);
-    Fuzzy_MF* speed_PM = mfInit("NB", 0.333, 0.667, 0.667, 1);
-    Fuzzy_MF* speed_PB = mfInit("NB", 0.667, 1, 1, 1);
+    Fuzzy_MF* speed_PS = mfInit("PS", 0, 0.333, 0.333, 0.667);
+    Fuzzy_MF* speed_PM = mfInit("PM", 0.333, 0.667, 0.667, 1);
+    Fuzzy_MF* speed_PB = mfInit("PB", 0.667, 1, 1, 1);
     speed_NB->next = speed_NM;
     speed_NM->next = speed_NS;
     speed_NS->next = speed_ZE;
@@ -366,11 +370,11 @@ void fuzzySystemInit(Fuzzy_IO* fuzzy_system_input, Fuzzy_IO* fuzzy_system_output
     Fuzzy_IO* error_input = ioInit("Error", error_NB);
     Fuzzy_IO* derror_intput = ioInit("DError", derror_NB);
     error_input->next = derror_intput;
-    fuzzy_system_input = error_input;
+    fuzzy_inputs = *error_input;
 
     // Initiate the system output
     Fuzzy_IO* speed_output = ioInit("Speed", speed_NB);
-    fuzzy_system_output = speed_output;
+    fuzzy_outputs = *speed_output;
 
     // Initiate the system rule
     Fuzzy_MF* rule_out[5][5] = {{speed_NB, speed_NB, speed_NM, speed_NS, speed_ZE},
@@ -403,7 +407,10 @@ void fuzzySystemInit(Fuzzy_IO* fuzzy_system_input, Fuzzy_IO* fuzzy_system_output
             }
         }
     } 
-    fuzzy_system_rule = head;
+    fuzzy_rules = *head;
+
+    // Initiate the motor hardware
+    motorInit(motor);
 }
 
 // Function to perform fuzzy control 
