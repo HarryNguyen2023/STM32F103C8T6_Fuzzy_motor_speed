@@ -1,0 +1,6 @@
+{
+    "files.associations": {
+        "fuzzy_motor.h": "c",
+        "fuzzy_motor_cfg.h": "c"
+    }
+}

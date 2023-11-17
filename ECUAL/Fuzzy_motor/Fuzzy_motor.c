@@ -126,6 +126,7 @@ static void motorHardwareControl(Fuzzy_IO* fuzzy_outputs, Fuzzy_motor* motor)
 {
     // Get the output from the Fuzzy controller
     motor->output += (fuzzy_outputs->value) * motor->output_gain;
+    
     // Saturation the output 
     if(motor->output > motor->MAX_PWM)
         motor->output = motor->MAX_PWM;

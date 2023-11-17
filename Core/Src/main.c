@@ -22,8 +22,11 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include <string.h>
+#include <stdlib.h>
+
 #include "../../ECUAL/Fuzzy_motor/Fuzzy_motor.h"
 #include "../../ECUAL/Fuzzy_motor/Fuzzy_motor_cfg.h"
+#include "../../ECUAL/Fuzzy_motor/motor_commands.h"
 #include "../../ECUAL/UART/STM32_UART.h"
 /* USER CODE END Includes */
 
@@ -63,12 +66,14 @@ static void MX_TIM2_Init(void);
 static void MX_TIM4_Init(void);
 static void MX_USART1_UART_Init(void);
 /* USER CODE BEGIN PFP */
-
+static void commandHandling(uint8_t* rcv_buffer, uint16_t msg_size);
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 char rcv_buffer[BUFFER_SIZE];
+char tx_buffer[BUFFER_SIZE];
+int wheel_velocities[2];
 uint8_t controller = 0;
 
 // Function to handle timer interrupt handler
@@ -78,6 +83,23 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
   {
     if(controller)
       fuzzySpeedControl(&motor1, &fuzzy_inputs, &fuzzy_outputs, &fuzzy_rules);
+  }
+}
+
+// Function to handle UART reception interrupt
+void HAL_UARTEx_RxEventCallback(UART_HandleTypeDef* huart, uint16_t msg_size)
+{
+  // Check if the interrurpt source is due to usart 1 module
+  if(huart->Instance == USART1)
+  {
+    // Extract the command data
+    commandHandling(rcv_buffer, msg_size);
+
+    // Clear the bufer
+    memset(rcv_buffer, 0, BUFFER_SIZE);
+
+    // Restart the UART DMA IDLE line reception
+    STM32_UART_IDLE_Start(huart, &hdma_usart1_rx, rcv_buffer, BUFFER_SIZE); 
   }
 }
 /* USER CODE END 0 */
@@ -411,6 +433,52 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE BEGIN 4 */
 
+static void commandHandling(uint8_t* rcv_buffer, uint16_t msg_size)
+{
+  uint8_t command = rcv_buffer[0];
+  if(msg_size == 1)
+  {
+    switch(command)
+    {
+      case GET_BAUDRATE: ;
+        uint32_t uart_baudrate = huart1.Init.BaudRate;
+        sprintf((char*)tx_buffer,"Baudrate: %lu\r\n", uart_baudrate);
+        STM32_UART_sendString(&huart1, tx_buffer);
+        break;
+      case PING:
+        STM32_UART_sendString(&huart1, (uint8_t*)"STM32 active\r\n");
+        break;
+      default:
+        STM32_UART_sendString(&huart1, (uint8_t*)"Command error!\r\n");
+        break;
+    }
+  }
+  else
+  {
+    // Case control the velocity of the motor
+    if(command == VELOCITY_CONTROL)
+    {
+      controller = 1;
+      // Get the actual velocity command 
+      uint8_t command_idx = 0;
+      char* rest = NULL;
+      char* token = strtok_r((char*)rcv_buffer, " ", &rest);
+      while(token != NULL)
+      {
+        if(command_idx > 0)
+          wheel_velocities[command_idx - 1] = atoi(token);
+        // Constraint the index value 
+        if(++command_idx == 3) 
+          command_idx = 0;
+        token = strtok_r(NULL, " ", &rest);
+      }
+      inputSpeedHandling(&motor1, wheel_velocities[0]);
+      // For debugging
+      sprintf((char*)tx_buffer,"Speed 1: %d\r\n", wheel_velocities[0]);
+      STM32_UART_sendString(&huart1, tx_buffer);
+    }
+  }
+}
 /* USER CODE END 4 */
 
 /**
