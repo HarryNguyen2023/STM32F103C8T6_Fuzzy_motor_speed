@@ -1,14 +1,19 @@
 #include "Fuzzy_motor.h"
 #include "Fuzzy_motor_cfg.h"
+#include "STM32_UART.h"
 
-#include <math.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+
+// For debug
+uint8_t buffer[35];
 
 #define min(a, b) ((a < b) ? a : b)
 #define max(a, b) ((a > b) ? a : b)
 
 // Private function prototypes
-static void motorInit(Fuzzy_motor* motor);
+static void motorInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor);
 static void motorBrake(Fuzzy_motor* motor);
 static uint32_t readEncoder(Fuzzy_motor* motor);
 static void getErrorFeedback(Fuzzy_motor* motor);
@@ -25,12 +30,12 @@ static float mfArea(Fuzzy_MF* mf);
 static void fuzzification(Fuzzy_IO* fuzzy_inputs);
 static void fuzzyRuleInference(Fuzzy_rule_base* fuzzy_rules);
 static void defuzzification(Fuzzy_IO* fuzzy_outputs);
-
+static void fuzzyReset(Fuzzy_rule_base* fuzzy_rules);
 
 // -------------------------------------------- Private functions hidden from users ---------------------------------------------------
 
 // Function to initiate the motor GPIO pins
-static void motorInit(Fuzzy_motor* motor)
+static void motorInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     // Initiate the GPIO pins of the motor
@@ -53,9 +58,9 @@ static void motorInit(Fuzzy_motor* motor)
         HAL_GPIO_Init(motor->motor_ports[i], &GPIO_InitStruct);
     }
     // Calculate the gains
-    motor->error_gain = (uint16_t)(motor->MAX_INPUT_SPEED * motor->encoder_rev * motor->time_frame) / 60000.0;
+    motor->error_gain = (uint16_t)((motor->MAX_INPUT_SPEED * motor->encoder_rev * motor->time_frame) / 60000.0);
     motor->derror_gain = motor->error_gain;
-    motor->output_gain = motor->MAX_PWM;
+    motor->output_gain = (uint16_t)(motor->MAX_PWM * 0.55);
 }
 
 // Function to update the PWM dutycycle of the motor
@@ -99,6 +104,7 @@ static uint32_t readEncoder(Fuzzy_motor* motor)
 // Function to get the feedback of each control cycle
 static void getErrorFeedback(Fuzzy_motor* motor)
 {
+    motor->current_encoder = readEncoder(motor);
     // Get number of the encoder pulse in the last time frame
     if(motor->direction == 0 && (motor->current_encoder < motor->prev_encoder) && (motor->prev_encoder - motor->current_encoder > 16000))
     {
@@ -302,6 +308,24 @@ static void defuzzification(Fuzzy_IO* fuzzy_outputs)
     }
 }
 
+// Function to reset the output of membership function after each control cycle
+static void fuzzyReset(Fuzzy_rule_base* fuzzy_rules)
+{
+    Fuzzy_rule_base* rules;
+    Fuzzy_rule_element *rule_if, *rule_then;
+    for(rules = fuzzy_rules; rules != NULL; rules = rules->next)
+    {
+        for(rule_if = rules->if_side; rule_if != NULL; rule_if = rule_if->next)
+        { 
+            *(rule_if->value) = 0;
+        }
+        for(rule_then = rules->then_side; rule_then != NULL; rule_then = rule_then->next)
+        {
+            *(rule_then->value) = 0;
+        }
+    }
+}
+
 // ---------------------------------------------- Public functions used by users -------------------------------------------------------
 
 // Function to get the input desired control speed of the motor
@@ -328,11 +352,11 @@ void inputSpeedHandling(Fuzzy_motor* motor, int speed)
 }
 
 // Function to initialize the Fuzzy logic system
-void fuzzySystemInit(Fuzzy_motor* motor)
+void fuzzySystemInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor)
 {
     // Declare Error membership functions
-    Fuzzy_MF* error_NB = mfInit("NS", -1, -1, -0.6, -0.3);
-    Fuzzy_MF* error_NS = mfInit("NB", -0.6, -0.3, -0.3, 0);
+    Fuzzy_MF* error_NB = mfInit("NB", -1, -1, -0.6, -0.3);
+    Fuzzy_MF* error_NS = mfInit("NS", -0.6, -0.3, -0.3, 0);
     Fuzzy_MF* error_ZE = mfInit("ZE", -0.3, 0, 0, 0.3);
     Fuzzy_MF* error_PS = mfInit("PS", 0, 0.3, 0.3, 0.6);
     Fuzzy_MF* error_PB = mfInit("PB", 0.3, 0.6, 1, 1);
@@ -342,8 +366,8 @@ void fuzzySystemInit(Fuzzy_motor* motor)
     error_PS->next = error_PB;
 
     // Declare DError memebership functions
-    Fuzzy_MF* derror_NB = mfInit("NS", -1, -1, -1, -0.5);
-    Fuzzy_MF* derror_NS = mfInit("NB", -1, -0.5, -0.5, 0);
+    Fuzzy_MF* derror_NB = mfInit("NB", -1, -1, -1, -0.5);
+    Fuzzy_MF* derror_NS = mfInit("NS", -1, -0.5, -0.5, 0);
     Fuzzy_MF* derror_ZE = mfInit("ZE", -0.5, 0, 0, 0.5);
     Fuzzy_MF* derror_PS = mfInit("PS", 0, 0.5, 0.5, 1);
     Fuzzy_MF* derror_PB = mfInit("PB", 0.5, 1, 1, 1);
@@ -353,9 +377,9 @@ void fuzzySystemInit(Fuzzy_motor* motor)
     derror_PS->next = derror_PB;
 
     // Declare speed output membership functions
-    Fuzzy_MF* speed_NB = mfInit("NS", -1, -1, -1, -0.667);
+    Fuzzy_MF* speed_NB = mfInit("NB", -1, -1, -1, -0.667);
     Fuzzy_MF* speed_NM = mfInit("NM", -1, -0.667, -0.667, 0.333);
-    Fuzzy_MF* speed_NS = mfInit("NB", -0.667, -0.333, -0.333, 0);
+    Fuzzy_MF* speed_NS = mfInit("NS", -0.667, -0.333, -0.333, 0);
     Fuzzy_MF* speed_ZE = mfInit("ZE", -0.333, 0, 0, 0.333);
     Fuzzy_MF* speed_PS = mfInit("PS", 0, 0.333, 0.333, 0.667);
     Fuzzy_MF* speed_PM = mfInit("PM", 0.333, 0.667, 0.667, 1);
@@ -411,7 +435,7 @@ void fuzzySystemInit(Fuzzy_motor* motor)
     fuzzy_rules = *head;
 
     // Initiate the motor hardware
-    motorInit(motor);
+    motorInit(huart, motor);
 }
 
 // Function to perform fuzzy control 
@@ -430,6 +454,8 @@ void fuzzySpeedControl(Fuzzy_motor* motor, Fuzzy_IO* fuzzy_inputs, Fuzzy_IO* fuz
     fuzzyRuleInference(fuzzy_rules);
     // Defuzzication
     defuzzification(fuzzy_outputs);
+    // Reset the fuzzy
+    fuzzyReset(fuzzy_rules);
     // Control the hardware with output from the controller
     motorHardwareControl(fuzzy_outputs, motor);
 }

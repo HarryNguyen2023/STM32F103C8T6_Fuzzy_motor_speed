@@ -23,6 +23,7 @@
 /* USER CODE BEGIN Includes */
 #include <string.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #include "../../ECUAL/Fuzzy_motor/Fuzzy_motor.h"
 #include "../../ECUAL/Fuzzy_motor/Fuzzy_motor_cfg.h"
@@ -71,18 +72,41 @@ static void commandHandling(uint8_t* rcv_buffer, uint16_t msg_size);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-char rcv_buffer[BUFFER_SIZE];
-char tx_buffer[BUFFER_SIZE];
+uint8_t rcv_buffer[BUFFER_SIZE];
+uint8_t tx_buffer[BUFFER_SIZE];
 int wheel_velocities[2];
+int rpm_test[8] = {120, 150, 80, 100, 60, 140, 50, 10};
+uint8_t speed_test = 0;
 uint8_t controller = 0;
+uint8_t count = 0;
 
 // Function to handle timer interrupt handler
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef* htim)
 {
   if(htim->Instance == TIM1)
   {
-    if(controller)
-      fuzzySpeedControl(&motor1, &fuzzy_inputs, &fuzzy_outputs, &fuzzy_rules);
+    // Change the speed of the motor each 2s
+    if(! controller)
+    {
+      if(speed_test == 8)
+        HAL_TIM_Base_Stop_IT(&htim1);
+      inputSpeedHandling(&motor1, rpm_test[speed_test]);
+      ++speed_test;
+      controller = 1 - controller;
+    }
+
+    fuzzySpeedControl(&motor1, &fuzzy_inputs, &fuzzy_outputs, &fuzzy_rules);
+    if(count < 200)
+    {
+      sprintf((char*)tx_buffer, "%d\r\n", motor1.real_speed);
+      STM32_UART_sendString(&huart1, tx_buffer);
+      count++;
+    }
+    else if(count == 200)
+    {
+      controller = 0;
+      count = 0;
+    }   
   }
 }
 
@@ -146,7 +170,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 
   // Initiate the fuzzy controller
-  fuzzySystemInit(&motor1);
+  fuzzySystemInit(&huart1, &motor1);
 
   HAL_Delay(1000);
 
@@ -158,7 +182,7 @@ int main(void)
   // Start the timer interrupt
   HAL_TIM_Base_Start_IT(&htim1);
   /* USER CODE END 2 */
-
+  
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
   while (1)
@@ -473,9 +497,6 @@ static void commandHandling(uint8_t* rcv_buffer, uint16_t msg_size)
         token = strtok_r(NULL, " ", &rest);
       }
       inputSpeedHandling(&motor1, wheel_velocities[0]);
-      // For debugging
-      sprintf((char*)tx_buffer,"Speed 1: %d\r\n", wheel_velocities[0]);
-      STM32_UART_sendString(&huart1, tx_buffer);
     }
   }
 }

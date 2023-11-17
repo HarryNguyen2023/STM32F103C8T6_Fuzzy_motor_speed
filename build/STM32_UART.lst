@@ -1,0 +1,145 @@
+ARM GAS  C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s 			page 1
+
+
+   1              		.cpu cortex-m3
+   2              		.arch armv7-m
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.file	"STM32_UART.c"
+  14              		.text
+  15              	.Ltext0:
+  16              		.cfi_sections	.debug_frame
+  17              		.section	.text.STM32_UART_IDLE_Start,"ax",%progbits
+  18              		.align	1
+  19              		.global	STM32_UART_IDLE_Start
+  20              		.syntax unified
+  21              		.thumb
+  22              		.thumb_func
+  24              	STM32_UART_IDLE_Start:
+  25              	.LVL0:
+  26              	.LFB65:
+  27              		.file 1 "ECUAL/UART/STM32_UART.c"
+   1:ECUAL/UART/STM32_UART.c **** #include "STM32_UART.h"
+   2:ECUAL/UART/STM32_UART.c **** 
+   3:ECUAL/UART/STM32_UART.c **** // Function to start idle line detection for receiving message via UART
+   4:ECUAL/UART/STM32_UART.c **** void STM32_UART_IDLE_Start(UART_HandleTypeDef* huart, DMA_HandleTypeDef* dma_huart, uint8_t* rcv_bu
+   5:ECUAL/UART/STM32_UART.c **** {
+  28              		.loc 1 5 1 view -0
+  29              		.cfi_startproc
+  30              		@ args = 0, pretend = 0, frame = 0
+  31              		@ frame_needed = 0, uses_anonymous_args = 0
+  32              		.loc 1 5 1 is_stmt 0 view .LVU1
+  33 0000 10B5     		push	{r4, lr}
+  34              	.LCFI0:
+  35              		.cfi_def_cfa_offset 8
+  36              		.cfi_offset 4, -8
+  37              		.cfi_offset 14, -4
+  38 0002 0C46     		mov	r4, r1
+  39 0004 1146     		mov	r1, r2
+  40              	.LVL1:
+   6:ECUAL/UART/STM32_UART.c ****     // Configure the USART DMA module
+   7:ECUAL/UART/STM32_UART.c ****     HAL_UARTEx_ReceiveToIdle_DMA(huart, rcv_buffer, size);
+  41              		.loc 1 7 5 is_stmt 1 view .LVU2
+  42 0006 1A46     		mov	r2, r3
+  43              	.LVL2:
+  44              		.loc 1 7 5 is_stmt 0 view .LVU3
+  45 0008 FFF7FEFF 		bl	HAL_UARTEx_ReceiveToIdle_DMA
+  46              	.LVL3:
+   8:ECUAL/UART/STM32_UART.c ****     // Disable the half transfer interrupt
+   9:ECUAL/UART/STM32_UART.c ****     __HAL_DMA_DISABLE_IT(dma_huart, DMA_IT_HT);
+  47              		.loc 1 9 5 is_stmt 1 view .LVU4
+  48 000c 2268     		ldr	r2, [r4]
+  49 000e 1368     		ldr	r3, [r2]
+ARM GAS  C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s 			page 2
+
+
+  50 0010 23F00403 		bic	r3, r3, #4
+  51 0014 1360     		str	r3, [r2]
+  10:ECUAL/UART/STM32_UART.c **** }
+  52              		.loc 1 10 1 is_stmt 0 view .LVU5
+  53 0016 10BD     		pop	{r4, pc}
+  54              		.loc 1 10 1 view .LVU6
+  55              		.cfi_endproc
+  56              	.LFE65:
+  58              		.section	.text.STM32_UART_sendString,"ax",%progbits
+  59              		.align	1
+  60              		.global	STM32_UART_sendString
+  61              		.syntax unified
+  62              		.thumb
+  63              		.thumb_func
+  65              	STM32_UART_sendString:
+  66              	.LVL4:
+  67              	.LFB66:
+  11:ECUAL/UART/STM32_UART.c **** 
+  12:ECUAL/UART/STM32_UART.c **** // Function to transmit message via UART
+  13:ECUAL/UART/STM32_UART.c **** void STM32_UART_sendString(UART_HandleTypeDef* huart, uint8_t* tx_buffer)
+  14:ECUAL/UART/STM32_UART.c **** {
+  68              		.loc 1 14 1 is_stmt 1 view -0
+  69              		.cfi_startproc
+  70              		@ args = 0, pretend = 0, frame = 0
+  71              		@ frame_needed = 0, uses_anonymous_args = 0
+  72              		.loc 1 14 1 is_stmt 0 view .LVU8
+  73 0000 38B5     		push	{r3, r4, r5, lr}
+  74              	.LCFI1:
+  75              		.cfi_def_cfa_offset 16
+  76              		.cfi_offset 3, -16
+  77              		.cfi_offset 4, -12
+  78              		.cfi_offset 5, -8
+  79              		.cfi_offset 14, -4
+  80 0002 0546     		mov	r5, r0
+  81 0004 0C46     		mov	r4, r1
+  15:ECUAL/UART/STM32_UART.c ****     HAL_UART_Transmit(huart, tx_buffer, strlen((char*)tx_buffer), 100);
+  82              		.loc 1 15 5 is_stmt 1 view .LVU9
+  83              		.loc 1 15 41 is_stmt 0 view .LVU10
+  84 0006 0846     		mov	r0, r1
+  85              	.LVL5:
+  86              		.loc 1 15 41 view .LVU11
+  87 0008 FFF7FEFF 		bl	strlen
+  88              	.LVL6:
+  89              		.loc 1 15 5 view .LVU12
+  90 000c 6423     		movs	r3, #100
+  91 000e 82B2     		uxth	r2, r0
+  92 0010 2146     		mov	r1, r4
+  93 0012 2846     		mov	r0, r5
+  94 0014 FFF7FEFF 		bl	HAL_UART_Transmit
+  95              	.LVL7:
+  16:ECUAL/UART/STM32_UART.c **** }
+  96              		.loc 1 16 1 view .LVU13
+  97 0018 38BD     		pop	{r3, r4, r5, pc}
+  98              		.loc 1 16 1 view .LVU14
+  99              		.cfi_endproc
+ 100              	.LFE66:
+ 102              		.text
+ARM GAS  C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s 			page 3
+
+
+ 103              	.Letext0:
+ 104              		.file 2 "c:\\users\\84935\\stm32f103c8t6\\tools\\gcc-arm-none-eabi-10.3-2021.10-win32\\gcc-arm-non
+ 105              		.file 3 "c:\\users\\84935\\stm32f103c8t6\\tools\\gcc-arm-none-eabi-10.3-2021.10-win32\\gcc-arm-non
+ 106              		.file 4 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f103xb.h"
+ 107              		.file 5 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 108              		.file 6 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 109              		.file 7 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h"
+ 110              		.file 8 "c:\\users\\84935\\stm32f103c8t6\\tools\\gcc-arm-none-eabi-10.3-2021.10-win32\\gcc-arm-non
+ARM GAS  C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s 			page 4
+
+
+DEFINED SYMBOLS
+                            *ABS*:00000000 STM32_UART.c
+C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s:18     .text.STM32_UART_IDLE_Start:00000000 $t
+C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s:24     .text.STM32_UART_IDLE_Start:00000000 STM32_UART_IDLE_Start
+C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s:59     .text.STM32_UART_sendString:00000000 $t
+C:\Users\84935\AppData\Local\Temp\ccMFQLBe.s:65     .text.STM32_UART_sendString:00000000 STM32_UART_sendString
+
+UNDEFINED SYMBOLS
+HAL_UARTEx_ReceiveToIdle_DMA
+strlen
+HAL_UART_Transmit
