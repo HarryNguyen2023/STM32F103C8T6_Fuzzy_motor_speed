@@ -91,7 +91,7 @@ typedef struct
 // Public function prototypes
 void inputSpeedHandling(Fuzzy_motor* motor, int speed);
 
-void fuzzySystemInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor);
+void fuzzySystemInit(Fuzzy_motor* motor);
 void fuzzySpeedControl(Fuzzy_motor* motor, Fuzzy_IO* fuzzy_inputs, Fuzzy_IO* fuzzy_outputs, Fuzzy_rule_base* fuzzy_rules);
 
 #endif

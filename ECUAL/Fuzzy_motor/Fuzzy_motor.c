@@ -1,6 +1,5 @@
 #include "Fuzzy_motor.h"
 #include "Fuzzy_motor_cfg.h"
-#include "STM32_UART.h"
 
 #include <string.h>
 #include <stdlib.h>
@@ -13,7 +12,7 @@ uint8_t buffer[35];
 #define max(a, b) ((a > b) ? a : b)
 
 // Private function prototypes
-static void motorInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor);
+static void motorInit(Fuzzy_motor* motor);
 static void motorBrake(Fuzzy_motor* motor);
 static uint32_t readEncoder(Fuzzy_motor* motor);
 static void getErrorFeedback(Fuzzy_motor* motor);
@@ -35,7 +34,7 @@ static void fuzzyReset(Fuzzy_rule_base* fuzzy_rules);
 // -------------------------------------------- Private functions hidden from users ---------------------------------------------------
 
 // Function to initiate the motor GPIO pins
-static void motorInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor)
+static void motorInit(Fuzzy_motor* motor)
 {
     GPIO_InitTypeDef GPIO_InitStruct = {0};
     // Initiate the GPIO pins of the motor
@@ -352,7 +351,7 @@ void inputSpeedHandling(Fuzzy_motor* motor, int speed)
 }
 
 // Function to initialize the Fuzzy logic system
-void fuzzySystemInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor)
+void fuzzySystemInit(Fuzzy_motor* motor)
 {
     // Declare Error membership functions
     Fuzzy_MF* error_NB = mfInit("NB", -1, -1, -0.6, -0.3);
@@ -435,7 +434,7 @@ void fuzzySystemInit(UART_HandleTypeDef* huart, Fuzzy_motor* motor)
     fuzzy_rules = *head;
 
     // Initiate the motor hardware
-    motorInit(huart, motor);
+    motorInit(motor);
 }
 
 // Function to perform fuzzy control 

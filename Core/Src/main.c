@@ -170,7 +170,7 @@ int main(void)
   HAL_TIM_PWM_Start(&htim4, TIM_CHANNEL_1);
 
   // Initiate the fuzzy controller
-  fuzzySystemInit(&huart1, &motor1);
+  fuzzySystemInit(&motor1);
 
   HAL_Delay(1000);
 
