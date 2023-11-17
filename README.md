@@ -38,7 +38,8 @@ Notice that this controller can be improved by tuing the gains, as well as chang
 
 ## Reference
 
-[1]. Greg Viot, Fuzzy Logic in C, Dr. Dobb's Journal, February 1993.
+[1]. Greg Viot, Fuzzy Logic in C, Dr. Dobb's Journal, February 1993, https://www.chebucto.ns.ca/Science/AIMET/archive/ddj/fuzzy_logic_in_C/.
+
 [2]. Nguyễn Đức Hiển, Hoàng Đình Cơ, TÀI LIỆU HỌC TẬP ĐIỀU KHIỂN MỜ VÀ MẠNG NORON, Trường ĐH KTe-KThuat Công Nghiệp, Hà Nội, 2019.
 
 
